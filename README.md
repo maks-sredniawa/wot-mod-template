@@ -7,16 +7,16 @@ The example mod writes `[maksforge.example_mod] battle loaded` to `game.log` whe
 ## Start
 
 ```sh
-gh repo create maksforge/wot-<name> --template maksforge/wot-mod-template --public --clone
-cd wot-<name>
-python3 bootstrap.py --slug <name> --name "<Name>" --description "<One sentence.>"
+gh repo create maksforge/wot-<slug-with-hyphens> --template maksforge/wot-mod-template --public --clone
+cd wot-<slug-with-hyphens>
+python3 bootstrap.py --slug <slug> --name "<Name>" --description "<One sentence.>"
 python2.7 -m unittest discover -s tests && ./build.sh
 git commit -am "Start <Name> from the mod template"
 gh repo edit --add-topic world-of-tanks-mod,world-of-tanks --homepage https://maksforge.com/#wot-mods \
   --description "Free World of Tanks mod that <does what>."
 ```
 
-For example, `--slug ping_distance --name "Ping Distance"` gives the id `maksforge.ping_distance` and the entry point `mod_maksforge_ping_distance.py`. Use `--dry-run` to see the changes first.
+For example, `--slug ping_distance --name "Ping Distance"` in the repo `wot-ping-distance` gives the id `maksforge.ping_distance` and the entry point `mod_maksforge_ping_distance.py`. The repo name must be `wot-` plus the slug with hyphens, because the README's issue link is built from it. Use `--dry-run` to see the changes first.
 
 `bootstrap.py` renames `example_mod` everywhere: the mod id, the files, the package, the config folder, the log prefix and the issue link. It replaces this README with `mod-README.md`, then deletes itself. The repository's topics, description and homepage aren't copied from a template, so the last command sets them. `world-of-tanks-mod` is the topic the org page's mod list filters on.
 
@@ -25,7 +25,7 @@ Then replace the example with the real mod:
 1. Write the mod in `mod_maksforge_<slug>.py` and its package `maksforge_<slug>/`. A one-file mod can drop the package and `config.py`, as `wot-ping-distance` does.
 2. Replace `tests/test_mod.py` with tests for the real behaviour. Add the game modules the mod imports to `tests/game_stubs.py`.
 3. Fill in the README: what the mod does, its settings table, and any mods it needs (for example GUIFlash).
-4. List it on the home page and the org overview, with its icon at `assets/icons/wot-<slug>.webp`.
+4. List it on the home page and the org overview, with its icon at `assets/icons/wot-<slug-with-hyphens>.webp`.
 
 ## What's in it
 
@@ -36,7 +36,7 @@ Then replace the example with the real mod:
 | `src/res/scripts/client/gui/mods/maksforge_<slug>/config.py` | Loads `mods/configs/maksforge.<slug>/config.json`, writes the defaults on first start, ignores unknown keys, and falls back to the defaults if the file is broken. |
 | `build.sh` | Compiles the scripts with Python 2.7 and packs `dist/maksforge.<slug>_<version>.wotmod`, uncompressed, which is the only way the game reads it. |
 | `tests/game_stubs.py` | Fake `debug_utils`, `PlayerEvents` and `gui.mods` packages, so the mod imports as it does in the game. |
-| `.github/workflows/build.yml` | Runs the tests and the build on Python 2.7 for every push and pull request. A `v<version>` tag also publishes a GitHub release with the `.wotmod`, and fails if the tag and `meta.xml` disagree. |
+| `.github/workflows/build.yml` | Runs the tests and the build on Python 2.7 for pushes to `main`, `v*` tags and pull requests. A `v<version>` tag also publishes a GitHub release with the `.wotmod`, and fails if the tag and `meta.xml` disagree. |
 
 ## Conventions
 

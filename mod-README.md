@@ -10,7 +10,7 @@ Copy `maksforge.example_mod_<version>.wotmod` into `World_of_Tanks/mods/<game ve
 
 ## Settings
 
-The first battle writes `mods/configs/maksforge.example_mod/config.json`:
+The mod writes `mods/configs/maksforge.example_mod/config.json` the first time the client starts:
 
 | Key | Default | Meaning |
 | --- | --- | --- |
