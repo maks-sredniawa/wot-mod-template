@@ -80,7 +80,10 @@ def main() -> int:
         sys.exit("commit or discard the changes to tracked files first")
 
     files = tracked_files()
-    rewrites = [(path, text) for path in files if (text := rewritten(path, args.slug, args.name, args.description))]
+    rewrites = [
+        (path, text) for path in files
+        if path != ROOT / "README.md" and (text := rewritten(path, args.slug, args.name, args.description))
+    ]
     moves = [(path, renamed(path, args.slug)) for path in files if SLUG in str(path.relative_to(ROOT))]
     moves.append((ROOT / "mod-README.md", ROOT / "README.md"))
     taken = [target for _, target in moves[:-1] if target.exists()]
