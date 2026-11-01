@@ -22,7 +22,7 @@ jobs:
         run: python2.7 -m unittest discover -s tests -v
       - name: Build
         run: PYTHON27=python2.7 ./build.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: wotmod
           path: dist/*.wotmod
@@ -36,7 +36,7 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: wotmod
           path: dist
