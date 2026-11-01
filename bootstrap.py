@@ -5,66 +5,59 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from typing import Optional
+from xml.sax.saxutils import escape
 
 ROOT = Path(__file__).resolve().parent
+SELF = Path(__file__).name
 SLUG = "example_mod"
 NAME = "Example Mod"
 DESCRIPTION = "Writes a line to game.log when a battle loads."
-SKIP = {".git", "build", "dist", "__pycache__"}
+
+
+def git(*args: str) -> str:
+    return subprocess.run(["git", *args], cwd=ROOT, check=True, capture_output=True, text=True).stdout
 
 
 def tracked_files() -> list[Path]:
-    paths = []
-    for path in sorted(ROOT.rglob("*")):
-        if not path.is_file() or path.suffix == ".pyc" or path.name == "bootstrap.py":
-            continue
-        if SKIP.intersection(path.relative_to(ROOT).parts):
-            continue
-        paths.append(path)
-    return paths
+    return [ROOT / name for name in git("ls-files", "-z").split("\0") if name and name != SELF]
 
 
 def lowercase_description(description: str) -> str:
     return description[0].lower() + description[1:]
 
 
-def replacements(slug: str, name: str, description: str) -> list[tuple[str, str]]:
+def replacements(slug: str, name: str, description: str, xml: bool) -> list[tuple[str, str]]:
+    text = escape if xml else str
     return [
-        (DESCRIPTION, description),
-        (lowercase_description(DESCRIPTION), lowercase_description(description)),
+        (DESCRIPTION, text(description)),
+        (lowercase_description(DESCRIPTION), text(lowercase_description(description))),
         (SLUG, slug),
         (SLUG.replace("_", "-"), slug.replace("_", "-")),
-        (NAME, name),
+        (NAME, text(name)),
     ]
 
 
-def rewrite(path: Path, pairs: list[tuple[str, str]], dry_run: bool) -> None:
-    text = path.read_text(encoding="utf-8")
+def rewritten(path: Path, slug: str, name: str, description: str) -> Optional[str]:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        return None
     new = text
-    for old, replacement in pairs:
+    for old, replacement in replacements(slug, name, description, xml=path.suffix == ".xml"):
         new = new.replace(old, replacement)
-    if new != text:
-        print(f"rewrite {path.relative_to(ROOT)}")
-        if not dry_run:
-            path.write_text(new, encoding="utf-8")
+    return new if new != text else None
 
 
 def renamed(path: Path, slug: str) -> Path:
     return ROOT / str(path.relative_to(ROOT)).replace(SLUG, slug)
 
 
-def move(source: Path, target: Path, dry_run: bool) -> None:
-    print(f"move    {source.relative_to(ROOT)} -> {target.relative_to(ROOT)}")
-    if not dry_run:
-        target.parent.mkdir(parents=True, exist_ok=True)
-        subprocess.run(["git", "mv", "-f", str(source), str(target)], cwd=ROOT, check=True)
-
-
-def remove_empty_dirs(dry_run: bool) -> None:
-    for path in sorted(ROOT.rglob("*"), key=lambda p: len(p.parts), reverse=True):
-        if path.is_dir() and not SKIP.intersection(path.relative_to(ROOT).parts) and not any(path.iterdir()):
-            if not dry_run:
-                path.rmdir()
+def remove_empty_dirs(sources: list[Path]) -> None:
+    dirs = {parent for source in sources for parent in source.parents if ROOT in parent.parents}
+    for path in sorted(dirs, key=lambda p: len(p.parts), reverse=True):
+        if path.is_dir() and not any(path.iterdir()):
+            path.rmdir()
 
 
 def main() -> int:
@@ -79,21 +72,36 @@ def main() -> int:
         sys.exit("--slug must be lowercase letters, digits and underscores, starting with a letter")
     if args.slug == SLUG:
         sys.exit(f"--slug must differ from the template's {SLUG}")
+    if not args.name.strip() or not args.description.strip():
+        sys.exit("--name and --description must not be empty")
     if not (ROOT / "mod-README.md").is_file():
         sys.exit("mod-README.md is missing: this repository has already been bootstrapped")
+    if git("status", "--porcelain", "--untracked-files=no"):
+        sys.exit("commit or discard the changes to tracked files first")
 
-    pairs = replacements(args.slug, args.name, args.description)
-    for path in tracked_files():
-        rewrite(path, pairs, args.dry_run)
-    for path in tracked_files():
-        if SLUG in str(path.relative_to(ROOT)):
-            move(path, renamed(path, args.slug), args.dry_run)
-    move(ROOT / "mod-README.md", ROOT / "README.md", args.dry_run)
-    remove_empty_dirs(args.dry_run)
+    files = tracked_files()
+    rewrites = [(path, text) for path in files if (text := rewritten(path, args.slug, args.name, args.description))]
+    moves = [(path, renamed(path, args.slug)) for path in files if SLUG in str(path.relative_to(ROOT))]
+    moves.append((ROOT / "mod-README.md", ROOT / "README.md"))
+    taken = [target for _, target in moves[:-1] if target.exists()]
+    if taken:
+        sys.exit("already exists: " + ", ".join(str(target.relative_to(ROOT)) for target in taken))
 
+    for path, _ in rewrites:
+        print(f"rewrite {path.relative_to(ROOT)}")
+    for source, target in moves:
+        print(f"move    {source.relative_to(ROOT)} -> {target.relative_to(ROOT)}")
+    print(f"remove  {SELF}")
     if args.dry_run:
         return 0
-    subprocess.run(["git", "rm", "-q", "bootstrap.py"], cwd=ROOT, check=True)
+
+    for path, text in rewrites:
+        path.write_text(text, encoding="utf-8")
+    for source, target in moves:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        git("mv", "-f", str(source), str(target))
+    remove_empty_dirs([source for source, _ in moves])
+    git("rm", "-q", SELF)
     print("\nDone. Next: python2.7 -m unittest discover -s tests && ./build.sh, then commit.")
     return 0
 
