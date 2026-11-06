@@ -7,7 +7,7 @@ The example mod writes `[maksforge.example_mod] battle loaded` to `game.log` whe
 ## Start
 
 ```sh
-gh repo create maksforge/wot-<slug-with-hyphens> --template maksforge/wot-mod-template --public --clone
+gh repo create maks-sredniawa/wot-<slug-with-hyphens> --template maks-sredniawa/wot-mod-template --public --clone
 cd wot-<slug-with-hyphens>
 python3 bootstrap.py --slug <slug> --name "<Name>" --description "<One sentence.>"
 python2.7 -m unittest discover -s tests && ./build.sh

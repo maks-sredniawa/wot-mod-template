@@ -31,6 +31,6 @@ Bump `<version>` in `src/meta.xml`, merge, then push a tag `v<version>`. CI buil
 
 ## Support
 
-Questions and bug reports: open an issue at https://github.com/maksforge/wot-example-mod/issues or write to wotmods.support@maksforge.com. For a bug, include your game version and `game.log` from the game folder.
+Questions and bug reports: open an issue at https://github.com/maks-sredniawa/wot-example-mod/issues or write to wotmods.support@maksforge.com. For a bug, include your game version and `game.log` from the game folder.
 
 This is a free fan-made mod by MaksForge. It is not affiliated with or endorsed by Wargaming.
